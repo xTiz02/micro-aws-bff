@@ -1,0 +1,20 @@
+# En ECS, catalog-service y order-service no tienen target group público: se resuelven
+# por DNS interno vía ECS Service Connect / Cloud Map (ver README, sección "Cómputo").
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${AUTH_ISSUER_URI}
+
+app:
+  clients:
+    catalog-service:
+      base-url: ${CATALOG_SERVICE_URL:http://catalog-service:8081}
+    order-service:
+      base-url: ${ORDER_SERVICE_URL:http://order-service:8082}
+
+logging:
+  level:
+    root: INFO
+    com.prd.bffclient: INFO

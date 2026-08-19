@@ -1,0 +1,13 @@
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://localhost:65535/jwks
+
+app:
+  clients:
+    catalog-service:
+      timeout-ms: 2000
+    order-service:
+      timeout-ms: 2000
