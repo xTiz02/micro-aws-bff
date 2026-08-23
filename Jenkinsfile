@@ -9,12 +9,27 @@ pipeline {
     SERVICE        = 'bff-client-service'
     TASK_FAMILY    = 'bff-client'
     IMAGE_TAG      = "${env.GIT_COMMIT.take(7)}"
+    GITHUB_TOKEN   = credentials('github-packages-token')
   }
 
   stages {
+    stage('Configure Maven') {
+      steps {
+        writeFile file: 'settings.xml', text: """<settings>
+  <servers>
+    <server>
+      <id>github-micro-aws-common</id>
+      <username>xTiz02</username>
+      <password>${GITHUB_TOKEN}</password>
+    </server>
+  </servers>
+</settings>"""
+      }
+    }
+
     stage('Test') {
       steps {
-        sh 'mvn -B test'
+        sh 'mvn -B -s settings.xml test'
       }
       post {
         always {
@@ -25,19 +40,17 @@ pipeline {
 
     stage('Package') {
       steps {
-        sh 'mvn -B package -DskipTests'
+        sh 'mvn -B -s settings.xml package -DskipTests'
       }
     }
 
     stage('Docker Build & Push') {
       steps {
-        withCredentials([string(credentialsId: 'github-packages-token', variable: 'GITHUB_TOKEN')]) {
-          sh """
-            DOCKER_BUILDKIT=1 docker build --secret id=github_token,env=GITHUB_TOKEN -t ${ECR_URI}:${IMAGE_TAG} .
-            aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
-            docker push ${ECR_URI}:${IMAGE_TAG}
-          """
-        }
+        sh """
+          DOCKER_BUILDKIT=1 docker build --secret id=github_token,env=GITHUB_TOKEN -t ${ECR_URI}:${IMAGE_TAG} .
+          aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+          docker push ${ECR_URI}:${IMAGE_TAG}
+        """
       }
     }
 
