@@ -2,8 +2,10 @@ package com.prd.bffclient.config;
 
 import com.prd.common.constant.SecurityConstants;
 import com.prd.common.logging.CorrelationIdSupport;
+import io.netty.resolver.DefaultAddressResolverGroup;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -11,6 +13,7 @@ import org.springframework.web.reactive.function.client.ClientRequest;
 import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+import reactor.netty.http.client.HttpClient;
 
 /**
  * catalog-service y order-service no son alcanzables por el cliente externo (ver README:
@@ -21,19 +24,33 @@ import reactor.core.publisher.Mono;
 @Configuration
 public class WebClientConfig {
 
+  /**
+   * El resolver DNS asíncrono por defecto de reactor-netty no respeta de forma confiable
+   * las entradas que ECS Service Connect inyecta para resolver los nombres cortos internos
+   * (oauth-server, catalog-server, order-server) — problema documentado en reactor-netty
+   * al combinarse con Service Connect. Forzamos el resolver nativo de la JVM, que sí los
+   * respeta correctamente.
+   */
   @Bean
-  public WebClient catalogWebClient(ClientsProperties properties) {
+  public HttpClient internalHttpClient() {
+    return HttpClient.create().resolver(DefaultAddressResolverGroup.INSTANCE);
+  }
+
+  @Bean
+  public WebClient catalogWebClient(ClientsProperties properties, HttpClient internalHttpClient) {
     return WebClient.builder()
         .baseUrl(properties.catalogService().baseUrl())
+        .clientConnector(new ReactorClientHttpConnector(internalHttpClient))
         .filter(propagateAuthorization())
         .filter(propagateCorrelationId())
         .build();
   }
 
   @Bean
-  public WebClient orderWebClient(ClientsProperties properties) {
+  public WebClient orderWebClient(ClientsProperties properties, HttpClient internalHttpClient) {
     return WebClient.builder()
         .baseUrl(properties.orderService().baseUrl())
+        .clientConnector(new ReactorClientHttpConnector(internalHttpClient))
         .filter(propagateAuthorization())
         .filter(propagateCorrelationId())
         .build();

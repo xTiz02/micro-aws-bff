@@ -35,7 +35,7 @@
     <dependency>
       <groupId>com.prd</groupId>
       <artifactId>starter-common</artifactId>
-      <version>1.0-SNAPSHOT</version>
+      <version>1.0.0</version>
     </dependency>
     <!-- Runtime real de CorrelationIdSupport (starter-common la declara "provided"). -->
     <dependency>
@@ -111,5 +111,15 @@
       </plugin>
     </plugins>
   </build>
+
+  <!-- De dónde resolver com.prd:starter-common (Maven Central sigue disponible como
+       repo implícito para todo lo demás; este solo se consulta para el groupId com.prd). -->
+  <repositories>
+    <repository>
+      <id>github-micro-aws-common</id>
+      <name>GitHub Packages - micro-aws-common</name>
+      <url>https://maven.pkg.github.com/xTiz02/micro-aws-common</url>
+    </repository>
+  </repositories>
 
 </project>
